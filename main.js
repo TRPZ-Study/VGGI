@@ -89,63 +89,23 @@ function draw() {
 function CreateSurfaceData() {
     let vertexList = [];
 
-    let u = 0,
-        t = -1;
-
-    // for (let j = -1; j < 1; j += 0.025) {
-    //     for (let i = 0; i < 360; i += 5) {
-    //         let v = getVertex(deg2rad(i), j);
-    //         vertexList.push(v.x, v.y, v.z);
-    //     }
-    // }
-    // while (t < 1) {
-    //     while (u < Math.PI * 2 ) {
-    //         let v = getVertex(u, t);
-    //         vertexList.push(v.x, v.y, v.z);
-    //         u += 0.1;
-    //     }
-    //     u = 0;
-    //     t += 0.05;
-    // }
-
     for (let i = -1; i < 1; i += 0.05) {
         for (let j = 0; j < Math.PI * 2; j += 0.1) {
-            let v = getVertex(j, i, 2);
-            vertexList.push(v.x, v.y, v.z);
+            let temp = vertex(j, i, 2);
+            vertexList.push(temp.x, temp.y, temp.z);
         }
     }
 
     return vertexList;
 }
 
-function getVertex(u, t, ti) {
+function vertex(u, t, ti) {
     let x = ((0.8 + t * Math.cos(0.2 * Math.PI) + 2 * Math.pow(t, 2) * Math.sin(0.2 * Math.PI)) * Math.cos(u)) / ti,
         y = ((0.8 + t * Math.cos(0.2 * Math.PI) + 2 * Math.pow(t, 2) * Math.sin(0.2 * Math.PI)) * Math.sin(u)) / ti,
         z = (-t * Math.sin(0.2 * Math.PI) + 2 * Math.pow(t, 2) * Math.cos(0.2 * Math.PI)) / ti;
     return { x: x, y: y, z: z }
 }
 
-// function getVertex(u, t) {
-//     let x = getX(u, t)
-//     let y = getY(u, t)
-//     let z = getZ(u, t)
-//     return { x: x, y: y, z: z }
-// }
-
-// function getX(u, t) {
-//     let x = (0.8 + t * Math.cos(0.2 * Math.PI) + 2 * Math.pow(t, 2) * Math.sin(0.2 * Math.PI)) * Math.cos(u);
-//     return x;
-// }
-
-// function getY(u, t) {
-//     let y = (0.8 + t * Math.cos(0.2 * Math.PI) + 2 * Math.pow(t, 2) * Math.sin(0.2 * Math.PI)) * Math.sin(u);
-//     return y;
-// }
-
-// function getZ(u, t) {
-//     let z = -t * Math.sin(0.2 * Math.PI) + 2 * Math.pow(t, 2) * Math.cos(0.2 * Math.PI)
-//     return z;
-// }
 
 
 /* Initialize the WebGL context. Called from init() */
