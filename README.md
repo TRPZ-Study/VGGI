@@ -1,4 +1,4 @@
-# Practical assignment #2
+# WebGL
 
 Варіант: 16
 
@@ -8,4 +8,4 @@
 
 Група: ТР-32мп
 
-![gif](./PA2.gif)
+![alt text](./Фото_фігури.png)
