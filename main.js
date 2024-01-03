@@ -4,6 +4,8 @@ let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
+let sphereSurface;              // A model to vizualize local light
+let startTime = Date.now();
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -89,18 +91,31 @@ function draw() {
 
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, modelViewProjection);
+    gl.uniform1f(shProgram.iTime, (Date.now() - startTime) * 0.001);
 
+
+    /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
-
+    gl.uniform1i(shProgram.iLight, false);
     surface.Draw();
+
+    gl.uniform1i(shProgram.iLight, true);
+    sphereSurface.Draw();   
+}
+
+function repeatDraw() {
+    draw()
+    window.requestAnimationFrame(repeatDraw)
 }
 
 function CreateSurfaceData() {
     let vertexList = [];
     let normalList = [];
+    let vertexListSphere = [];
+    let normalListSphere = [];
 
-    for (let i = -1; i < 1; i += 0.05) {
-        for (let j = 0; j < Math.PI * 2; j += 0.1) {
+    for (let j = 0; j < Math.PI * 2; j += 0.1) {
+        for (let i = -1; i < 1; i += 0.05) {
             let temp = vertex(j, i, 2);
             let temp2 = vertex(j + 0.1, i, 2);
             let temp3 = vertex(j, i + 0.05, 2);
@@ -129,9 +144,39 @@ function CreateSurfaceData() {
             normalList.push(n2.x, n2.y, n2.z)
             normalList.push(n2.x, n2.y, n2.z)
         }
+
+        for (let i = 0; i < Math.PI; i += 0.05) {
+            let temp = getSphereVertex(j, i);
+            let temp2 = getSphereVertex(j + 0.1, i);
+            let temp3 = getSphereVertex(j, i + 0.05);
+            let temp4 = getSphereVertex(j + 0.1, i + 0.05);
+            vertexListSphere.push(temp.x, temp.y, temp.z);
+            normalListSphere.push(temp.x, temp.y, temp.z);
+            vertexListSphere.push(temp2.x, temp2.y, temp2.z);
+            normalListSphere.push(temp2.x, temp2.y, temp2.z);
+            vertexListSphere.push(temp3.x, temp3.y, temp3.z);
+            normalListSphere.push(temp3.x, temp3.y, temp3.z);
+            vertexListSphere.push(temp3.x, temp3.y, temp3.z);
+            normalListSphere.push(temp3.x, temp3.y, temp3.z);
+            vertexListSphere.push(temp2.x, temp2.y, temp2.z);
+            normalListSphere.push(temp2.x, temp2.y, temp2.z);
+            vertexListSphere.push(temp4.x, temp4.y, temp4.z);
+            normalListSphere.push(temp4.x, temp4.y, temp4.z);
+        }
     }
 
-    return [vertexList, normalList];
+    return [vertexList, normalList, vertexListSphere, normalListSphere];
+
+}
+
+const r = 0.2;
+
+function getSphereVertex(long, lat) {
+    return {
+        x: r * Math.cos(long) * Math.sin(lat),
+        y: r * Math.sin(long) * Math.sin(lat),
+        z: r * Math.cos(lat)
+    }
 }
 
 function vertex(u, t, ti) {
@@ -165,10 +210,16 @@ function initGL() {
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iNormalMatrix = gl.getUniformLocation(prog, "NormalMatrix");
     shProgram.iColor = gl.getUniformLocation(prog, "color");
+    shProgram.iTime = gl.getUniformLocation(prog, "t");
+    shProgram.iLight = gl.getUniformLocation(prog, "lighting");
 
     surface = new Model('Surface');
     let sur = CreateSurfaceData();
     surface.BufferData(sur[0], sur[1]);
+
+    sphereSurface = new Model('Sphere');
+
+    sphereSurface.BufferData(sur[2], sur[3]);
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -234,5 +285,5 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
-    draw();
+    repeatDraw();
 }
