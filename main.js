@@ -52,9 +52,7 @@ function ShaderProgram(name, program) {
     // Location of the attribute variable in the shader program.
     this.iAttribVertex = -1;
     this.iAttribNormal = -1;
-    // Location of the uniform specifying a color for the primitive.
     this.iColor = -1;
-    // Location of the uniform matrix representing the combined transformation.
     this.iModelViewProjectionMatrix = -1;
     this.iNormalMatrix = -1;
 
@@ -73,7 +71,7 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     /* Set the values of the projection transformation */
-    let projection = m4.orthographic(-3, 3, -3, 3, -3, 14)
+    let projection = m4.orthographic(-5, 5, -5, 5, -3, 14)
 
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
@@ -83,7 +81,6 @@ function draw() {
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView);
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
-
     let modelViewProjection = m4.multiply(projection, matAccum1);
     const normalMatrix = m4.identity();
     m4.inverse(modelView, normalMatrix);
@@ -93,8 +90,6 @@ function draw() {
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, modelViewProjection);
     gl.uniform1f(shProgram.iTime, (Date.now() - startTime) * 0.001);
 
-
-    /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
     gl.uniform1i(shProgram.iLight, false);
     surface.Draw();
@@ -146,10 +141,11 @@ function CreateSurfaceData() {
         }
 
         for (let i = 0; i < Math.PI; i += 0.05) {
-            let temp = getSphereVertex(j, i);
-            let temp2 = getSphereVertex(j + 0.1, i);
-            let temp3 = getSphereVertex(j, i + 0.05);
-            let temp4 = getSphereVertex(j + 0.1, i + 0.05);
+            const r = 0.2;
+            let temp = vertexBall(j, i, r);
+            let temp2 = vertexBall(j + 0.1, i, r);
+            let temp3 = vertexBall(j, i + 0.05, r);
+            let temp4 = vertexBall(j + 0.1, i + 0.05, r);
             vertexListSphere.push(temp.x, temp.y, temp.z);
             normalListSphere.push(temp.x, temp.y, temp.z);
             vertexListSphere.push(temp2.x, temp2.y, temp2.z);
@@ -166,12 +162,9 @@ function CreateSurfaceData() {
     }
 
     return [vertexList, normalList, vertexListSphere, normalListSphere];
-
 }
 
-const r = 0.2;
-
-function getSphereVertex(long, lat) {
+function vertexBall(long, lat, r) {
     return {
         x: r * Math.cos(long) * Math.sin(lat),
         y: r * Math.sin(long) * Math.sin(lat),
