@@ -3,40 +3,69 @@
 // Vertex shader
 const vertexShaderSource = `
 attribute vec3 vertex, normal;
+attribute vec2 texCoord;
 uniform mat4 ModelViewProjectionMatrix, NormalMatrix;
 uniform float t;
 uniform bool lighting;
-varying vec4 forFragColor;
+varying vec2 vTexCoord;
+uniform float ober;
+uniform vec2 ballpos;
+
+mat4 translation(float tx, float ty, float tz) {
+    mat4 dst;
+    dst[0][0] = 1.0;
+    dst[0][ 1] = 0.0;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = 0.0;
+    dst[1][ 1] = 1.0;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = tx;
+    dst[3][ 1] = ty;
+    dst[3][ 2] = tz;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+}
+mat4 rotation(float angleInRadians) {
+    mat4 dst;
+    float c = cos(angleInRadians);
+    float s = sin(angleInRadians);
+    dst[0][0] = c;
+    dst[0][ 1] = s;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = -s;
+    dst[1][ 1] = c;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = 0.0;
+    dst[3][ 1] = 0.0;
+    dst[3][ 2] = 0.0;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+}
 
 void main() {
-    vec4 vertPos4 = ModelViewProjectionMatrix * vec4(vertex,1.0);
-    vec3 vertPos = vec3(vertPos4) / vertPos4.w;
-    vec3 normalInterp = vec3(NormalMatrix * vec4(normal, 0.0));
-    vec3 lightPos = 0.47*vec3(cos(t),sin(t),1.0);
-
-    vec3 N = normalize(normalInterp);
-    vec3 L = normalize(lightPos - vertPos);
-    float lambertian = max(dot(N, L), 0.0);
-    float specular = 0.0;
-    if(lambertian > 0.0) {
-        vec3 R = reflect(-L, N);
-        vec3 V = normalize(-vertPos);
-        // Compute the specular term
-        float specAngle = max(dot(R, V), 0.0);
-        specular = pow(specAngle, 80.0);
-    }
-    vec3 ambientColor = vec3(0.01, 0.3, 0.1);
-    vec3 diffuseColor = vec3(0.2, 0.9, 0.1);
-    vec3 specularColor = vec3(0);
-    forFragColor = vec4(ambientColor +lambertian * diffuseColor +specular * specularColor, 1.0);
-
-    if(lighting){
-        vertPos4.x+=lightPos.x;
-        vertPos4.y+=lightPos.y;
-        vertPos4.z+=lightPos.z;
-        forFragColor = vec4(1);
-    }
-    gl_Position = vertPos4;
+    mat4 r = rotation(ober);
+    mat4 tem = translation(-ballpos[0],-ballpos[1],0.0);
+    mat4 tem1 = translation(ballpos[0],ballpos[1],0.0);
+    vec4 v1 = tem*vec4(texCoord,0.0,1.0);
+    vec4 v2 = r*v1;
+    vec4 v3 = tem1*v2;
+    vTexCoord = vec2(v3.x,v3.y);
+    vec4 curLoc = ModelViewProjectionMatrix * vec4(vertex,1.0);
+    gl_Position = curLoc;
 }`;
 
 
@@ -49,7 +78,13 @@ const fragmentShaderSource = `
 #endif
 
 uniform vec4 color;
-varying vec4 forFragColor;
+varying vec2 vTexCoord;
+uniform sampler2D tmu;
+uniform bool lighting;
 void main() {
-    gl_FragColor = forFragColor;
+    vec4 curCol = texture2D(tmu, vTexCoord);
+    gl_FragColor = curCol;
+    if(lighting){
+        gl_FragColor = color;
+    }
 }`;

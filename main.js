@@ -5,26 +5,28 @@ let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 let sphereSurface;              // A model to vizualize local light
-let startTime = Date.now();
+let ballpos = [0.1, 0.1];
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
-
 
 // Constructor
 function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
     this.iNormalBuffer = gl.createBuffer();
+    this.iTexCoordBuffer = gl.createBuffer();
     this.count = 0;
 
-    this.BufferData = function (vertices, normals) {
+    this.BufferData = function (vertices, normals, texCoords) {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTexCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STREAM_DRAW);
 
         this.count = vertices.length / 3;
     }
@@ -37,6 +39,10 @@ function Model(name) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribNormal);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTexCoordBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribTexCoord, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribTexCoord);
 
         gl.drawArrays(gl.TRIANGLES, 0, this.count);
     }
@@ -70,37 +76,47 @@ function draw() {
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    /* Set the values of the projection transformation */
-    let projection = m4.orthographic(-5, 5, -5, 5, -3, 14)
-
-    /* Get the view matrix from the SimpleRotator object.*/
+    let projection = m4.orthographic(-3, 3, -3, 3, -3, 3)
     let modelView = spaceball.getViewMatrix();
 
     let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.7);
-    let translateToPointZero = m4.translation(0, 0, -10);
+    let translateToPointZero = m4.translation(0, 0, 0);
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView);
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
+
     let modelViewProjection = m4.multiply(projection, matAccum1);
-    const normalMatrix = m4.identity();
+
+    let normalMatrix = m4.identity();
     m4.inverse(modelView, normalMatrix);
-    m4.transpose(normalMatrix, normalMatrix);
+    normalMatrix = m4.transpose(normalMatrix, normalMatrix);
 
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
-    gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, modelViewProjection);
-    gl.uniform1f(shProgram.iTime, (Date.now() - startTime) * 0.001);
-
-    gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
-    gl.uniform1i(shProgram.iLight, false);
+    gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
+    gl.uniform1f(shProgram.iAngle, parseFloat(document.getElementById('ober').value));
+    gl.uniform2fv(shProgram.iballpos, ballpos);
+    
+    gl.uniform1i(shProgram.iOsv, false);
     surface.Draw();
-
-    gl.uniform1i(shProgram.iLight, true);
+    gl.uniform4fv(shProgram.iColor, [1, 1, 1, 1]);
+    
+    gl.uniform1i(shProgram.iOsv, true);
+    
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.multiply(modelViewProjection, m4.translation(...Object.values(vertex(ballpos[0],ballpos[1], 2)))));
+    
     sphereSurface.Draw();   
 }
 
-function repeatDraw() {
+function circleD() {
     draw()
-    window.requestAnimationFrame(repeatDraw)
+    window.requestAnimationFrame(circleD)
+}
+
+function mapRange(value, a, b, c, d) {
+    // first map value from (a..b) to (0..1)
+    value = (value - a) / (b - a);
+    // then map it from (0..1) to (c..d) and return it
+    return c + value * (d - c);
 }
 
 function CreateSurfaceData() {
@@ -108,6 +124,7 @@ function CreateSurfaceData() {
     let normalList = [];
     let vertexListSphere = [];
     let normalListSphere = [];
+    let texCoordList = [];
 
     for (let j = 0; j < Math.PI * 2; j += 0.1) {
         for (let i = -1; i < 1; i += 0.05) {
@@ -138,6 +155,13 @@ function CreateSurfaceData() {
             normalList.push(n2.x, n2.y, n2.z)
             normalList.push(n2.x, n2.y, n2.z)
             normalList.push(n2.x, n2.y, n2.z)
+
+            texCoordList.push(mapRange(j, 0, Math.PI * 2, 0, 1), mapRange(i, -1, 1, 0, 1));
+            texCoordList.push(mapRange(j + 0.1, 0, Math.PI * 2, 0, 1), mapRange(i, -1, 1, 0, 1));
+            texCoordList.push(mapRange(j, 0, Math.PI * 2, 0, 1), mapRange(i + 0.05, -1, 1, 0, 1));
+            texCoordList.push(mapRange(j, 0, Math.PI * 2, 0, 1), mapRange(i + 0.05, -1, 1, 0, 1));
+            texCoordList.push(mapRange(j + 0.1, 0, Math.PI * 2, 0, 1), mapRange(i, -1, 1, 0, 1));
+            texCoordList.push(mapRange(j + 0.1, 0, Math.PI * 2, 0, 1), mapRange(i + 0.05, -1, 1, 0, 1));
         }
 
         for (let i = 0; i < Math.PI; i += 0.05) {
@@ -161,7 +185,7 @@ function CreateSurfaceData() {
         }
     }
 
-    return [vertexList, normalList, vertexListSphere, normalListSphere];
+    return [vertexList, normalList, vertexListSphere, normalListSphere, texCoordList];
 }
 
 function vertexBall(long, lat, r) {
@@ -200,19 +224,23 @@ function initGL() {
 
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal = gl.getAttribLocation(prog, "normal");
+    shProgram.iAttribTexCoord = gl.getAttribLocation(prog, "texCoord");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iNormalMatrix = gl.getUniformLocation(prog, "NormalMatrix");
     shProgram.iColor = gl.getUniformLocation(prog, "color");
     shProgram.iTime = gl.getUniformLocation(prog, "t");
-    shProgram.iLight = gl.getUniformLocation(prog, "lighting");
+    shProgram.iOsv = gl.getUniformLocation(prog, "lighting");
+    shProgram.iTMU = gl.getUniformLocation(prog, 'tmu');
+    shProgram.iAngle = gl.getUniformLocation(prog, 'ober');
+    shProgram.iballpos = gl.getUniformLocation(prog, 'ballpos');
 
     surface = new Model('Surface');
     let sur = CreateSurfaceData();
-    surface.BufferData(sur[0], sur[1]);
+    surface.BufferData(sur[0], sur[1], sur[4]);
 
     sphereSurface = new Model('Sphere');
 
-    sphereSurface.BufferData(sur[2], sur[3]);
+    sphereSurface.BufferData(sur[2], sur[3], sur[3]);
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -249,6 +277,20 @@ function createProgram(gl, vShader, fShader) {
     return prog;
 }
 
+window.onkeydown = (e) => {
+    if (e.keyCode == 87) { //w
+        ballpos[0] = (ballpos[0] + 0.1) % (Math.PI * 2);
+    }
+    else if (e.keyCode == 65) { //a
+        ballpos[1] = Math.max(ballpos[1] - 0.1, -1);
+    }
+    else if (e.keyCode == 83) { //s
+        ballpos[0] = (ballpos[0]- 0.1 + 2 * Math.PI) % (Math.PI * 2);
+    }
+    else if (e.keyCode == 68) { //d
+        ballpos[1] = Math.min(ballpos[1] + 0.1, 1);
+    }
+}
 
 /**
  * initialization function that will be called when the page has loaded
@@ -278,5 +320,26 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
-    repeatDraw();
+    let texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    const image = new Image();
+    image.crossOrigin = 'anonymus';
+    image.src = "https://raw.githubusercontent.com/TRPZ-Study/VGGI/main/512.jpg";
+    image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            image
+        );
+        draw()
+    }
+
+    circleD();
 }
